@@ -1,7 +1,10 @@
 import os
+import random
 import shutil
 import ffmpeg
-
+from PIL import Image
+from PIL import ImageEnhance
+from torchvision import transforms
 
 g_res = 'res'
 g_output = 'output'
@@ -30,6 +33,31 @@ def split_video_2_img(video, file_name):
         .run(quiet=True)
 
 
+def p_bhd(file_path):
+    img = Image.open(file_path).convert('RGB')
+    enhancer = ImageEnhance.Contrast(img)
+    enhanced_image = enhancer.enhance(0.98)
+    enhanced_image.save(file_path)
+
+
+def tsf_img_random(file_name):
+    print('>>> tsf_img')
+    frame_dir = os.path.join(g_output, f'{file_name}/frame')
+    index = 0
+    i = 0
+    b = True
+    frame_list = os.listdir(frame_dir)
+    frame_list.sort(key=lambda x: int(x[:-4]))
+    for name in frame_list:
+        if index % 35 == 0:
+            b = True
+            i = random.randint(0, 35 - 1)
+        if b and index % 35 == i:
+            p_bhd(os.path.abspath(os.path.join(frame_dir, name)))
+            b = False
+        index += 1
+
+
 def merge_output(file_name):
     print('>>> merge_output')
     frame_dir = os.path.join(g_output, f'{file_name}/frame/%d.png')
@@ -38,8 +66,9 @@ def merge_output(file_name):
     overlay_file_path = os.path.join(g_res, g_video.overlay_file)
 
     f_in = (ffmpeg.input(frame_dir, framerate=30)
-            .filter('scale', size=g_video.size, force_original_aspect_ratio='increase'))
-    a_in = ffmpeg.input(audio_path)
+            .filter('scale', size=g_video.size))
+    a_in = (ffmpeg.input(audio_path)
+            .filter('atempo', f'{g_video.speed}'))
     overlay_file = (ffmpeg.input(overlay_file_path)
                     .filter('colorchannelmixer', aa=g_video.overlay_file_a)
                     .filter('scale', size=g_video.size, force_original_aspect_ratio='increase'))
@@ -47,6 +76,7 @@ def merge_output(file_name):
     (ffmpeg
      .concat(f_in, a_in, v=1, a=1)
      .overlay(overlay_file)
+     .filter('setpts', f'{1/g_video.speed}*PTS')
      .output(output_file_path)
      .run(quiet=not g_debug)
      )
@@ -58,6 +88,7 @@ def ob_file(file_path):
     input_video = ffmpeg.input(file_path)
     split_audio(input_video, file_name)
     split_video_2_img(input_video, file_name)
+    tsf_img_random(file_name)
     merge_output(file_name)
 
 

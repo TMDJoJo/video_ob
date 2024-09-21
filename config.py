@@ -7,6 +7,7 @@ class VideoConfig:
         self.size = 'hd720'
         self.overlay_file = ''
         self.overlay_file_a = 0.1
+        self.speed = 1
 
 
 class AudioConfig:
@@ -33,6 +34,7 @@ class Config:
         self.video.size = config.get('video', 'size')
         self.video.overlay_file = config.get('video', 'overlay')
         self.video.overlay_file_a = config.getfloat('video', 'overlay_a')
+        self.video.speed = config.getfloat('video', 'speed')
 
         self.audio.ar = config.get('audio', 'ar')
 
